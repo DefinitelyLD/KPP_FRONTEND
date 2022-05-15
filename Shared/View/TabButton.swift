@@ -8,12 +8,22 @@
 import SwiftUI
 
 struct TabButton: View{
+    @StateObject private var getAllChatsVM = GetAllChatsViewModel()
+    @EnvironmentObject var homeData: HomeViewModel
+    
     var image: String
     var title: String
     @Binding var selectedTab: String
     
     var body: some View {
-        Button(action: {withAnimation{selectedTab = title}}, label: {
+        Button(action: {
+            withAnimation{selectedTab = title}
+            if title == "All Chats"{
+                getAllChatsVM.getAllChats()
+                homeData.addChats(chats: getAllChatsVM.chats)
+            }
+            
+        }, label: {
             VStack(spacing: 7){
                 Image(systemName: image)
                     .font(.system(size: 16, weight: .semibold))

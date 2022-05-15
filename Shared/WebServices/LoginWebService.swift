@@ -28,7 +28,19 @@ struct LoginResponce: Codable{
     let token: String?
 }
 
+struct Chat: Codable{
+    let chatID: String?
+    let chatName: String?
+}
+
+struct ChatMessage: Codable{
+    let userID : String?
+    let messageText: String?
+}
+
 public class LoginWebService{
+    
+    var url: String = "https://720f-93-76-55-30.eu.ngrok.io"
     
     func register(username: String, password: String, email: String, completion: @escaping (Result<LoginResponce, AuthenticationError>) -> Void){
         
@@ -36,7 +48,7 @@ public class LoginWebService{
 
         print(params)
         
-        var request = URLRequest(url: URL(string: "https://e97d-93-76-55-30.eu.ngrok.io/Account/Register")!)
+        var request = URLRequest(url: URL(string: url + "/Account/Register")!)
         request.httpMethod = "POST"
         request.httpBody = try? JSONSerialization.data(withJSONObject: params, options: [])
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -68,7 +80,7 @@ public class LoginWebService{
 
         print(params)
         
-        var request = URLRequest(url: URL(string: "https://e97d-93-76-55-30.eu.ngrok.io/Account/Login")!)
+        var request = URLRequest(url: URL(string: url + "/Account/Login")!)
         request.httpMethod = "POST"
         request.httpBody = try? JSONSerialization.data(withJSONObject: params, options: [])
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -96,7 +108,7 @@ public class LoginWebService{
         
         let params = ["topic": chatName, "password": "123", "userId": userID]
         
-        var request = URLRequest(url: URL(string: "https://e97d-93-76-55-30.eu.ngrok.io/Chatroom/CreateChatroom")!)
+        var request = URLRequest(url: URL(string: url + "/Chatroom/CreateChatroom")!)
         request.addValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
         request.httpBody = try? JSONSerialization.data(withJSONObject: params, options: [])
@@ -127,7 +139,7 @@ public class LoginWebService{
         
         let params = ["chatID": chatID, "userId": userID, "text": messageText]
         
-        var request = URLRequest(url: URL(string: "https://e97d-93-76-55-30.eu.ngrok.io/Message/SendMessage")!)
+        var request = URLRequest(url: URL(string: url + "/Message/SendMessage")!)
         request.addValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
         request.httpBody = try? JSONSerialization.data(withJSONObject: params, options: [])
@@ -152,7 +164,7 @@ public class LoginWebService{
         
         let params = userName
         
-        var request = URLRequest(url: URL(string: "https://e97d-93-76-55-30.eu.ngrok.io/Account/GetUserByUserName")!)
+        var request = URLRequest(url: URL(string: url + "/Account/GetUserByUserName")!)
         request.addValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
         request.httpBody = try? JSONEncoder().encode(params)
@@ -181,7 +193,7 @@ public class LoginWebService{
         
         let params = userID
         
-        var request = URLRequest(url: URL(string: "https://e97d-93-76-55-30.eu.ngrok.io/Chatroom/AddToChatroom?chatId=" + chatID)!)
+        var request = URLRequest(url: URL(string: url + "/Chatroom/AddToChatroom?chatId=" + chatID)!)
         request.addValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         request.httpMethod = "POST"
         request.httpBody = try? JSONEncoder().encode(params)
@@ -201,4 +213,73 @@ public class LoginWebService{
         task.resume()
     }
     
+    func getAllChats(token: String, completion: @escaping(Result<[Chat], CustomError>) -> Void){
+        
+        var request = URLRequest(url: URL(string: url + "/Chatroom/GetAllChatrooms")!)
+        request.addValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let sesion = URLSession.shared
+        let task = sesion.dataTask(with: request, completionHandler: { data, response, error -> Void in
+            
+            guard let data = data, error == nil else{
+                completion(.failure(.custom(errorMessage: "No data")))
+                return
+            }
+            
+            var chats = [Chat]()
+            
+            let jsonResult = try? JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.mutableContainers) as? [String: Any]
+            let values = jsonResult?["$values"] as! [[String: Any]]
+            for value in values{
+                let id = value["id"] as! Int
+                let chatName = value["topic"] as! String
+                
+                chats.append(Chat(chatID: String(id), chatName: chatName))
+                print("id: " + String(id) + " " + "topic: " + chatName)
+            }
+            
+            print(chats.count)
+            completion(.success(chats))
+        })
+        
+        task.resume()
+    }
+    
+    func getAllMessages(token: String, chatID: String, completion: @escaping(Result<[ChatMessage], CustomError>) -> Void){
+        
+        var request = URLRequest(url: URL(string: url + "/Chatroom/GetChatroom?chatId=" + chatID)!)
+        request.addValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let sesion = URLSession.shared
+        let task = sesion.dataTask(with: request, completionHandler: { data, response, error -> Void in
+            
+            guard let data = data, error == nil else{
+                completion(.failure(.custom(errorMessage: "No data")))
+                return
+            }
+            
+            var messages = [ChatMessage]()
+            
+            let jsonResult = try? JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions.mutableContainers) as? [String: Any]
+            let allMsgs = jsonResult?["messages"] as! Dictionary<String, AnyObject>
+            let values = allMsgs["$values"] as! [[String: Any]]
+            for value in values {
+                let userInfo = value["user"] as! Dictionary<String, AnyObject>
+                let userID = userInfo["id"] as! String
+                let text = value["text"] as! String
+                
+                print("id: " + String(userID) + " " + "text: " + text)
+                messages.append(ChatMessage(userID: userID, messageText: text))
+            }
+                
+            print(messages.count)
+            completion(.success(messages))
+        })
+        
+        task.resume()
+    }
 }

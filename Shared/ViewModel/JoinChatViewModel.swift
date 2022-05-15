@@ -9,12 +9,11 @@ import SwiftUI
 
 class AddToChatViewModel: ObservableObject {
 
-    @Published var chatID: String = ""
     @Published var userName: String = ""
     
     let defaults = UserDefaults.standard
     
-    func addToChatroom(){
+    func addToChatroom(chatID: String){
 
         guard let token = defaults.string(forKey: "jsonwebtoken") else {
             return
@@ -22,8 +21,15 @@ class AddToChatViewModel: ObservableObject {
 
         LoginWebService().findUser(token: token, userName: userName){ result in
             switch result{
-            case .success(let chatID):
-                print("Decoded")
+            case .success(let addingUserID):
+                LoginWebService().addUserToChat(token: token, chatID: chatID, userID: addingUserID) {result in
+                    switch result{
+                    case .success(let response):
+                        print("User added to chat")
+                    case.failure(let response):
+                        print("User not added")
+                    }
+                }
             case .failure(let response):
                 print("Can't decode")
             }

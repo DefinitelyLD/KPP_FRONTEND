@@ -8,8 +8,12 @@
 import SwiftUI
 
 struct DetailView: View {
+    
+    let timer = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
+    
     @EnvironmentObject var homeData : HomeViewModel
     @StateObject private var sendMessageVM = SendMessageViewModel()
+    @StateObject private var getAllMessagesVM = GetAllMessagesViewModel()
     
     var user: RecentMessage
     var body: some View {
@@ -49,9 +53,9 @@ struct DetailView: View {
                 HStack(spacing: 15){
                
                     TextField("Enter Message", text: $homeData.message, onCommit: {
-                        homeData.sendMessage(user: user)
-                        print("messge: " + homeData.message)
-                        sendMessageVM.sendMessage(chatID: homeData.chatID, messageText: homeData.message)
+                        //homeData.sendMessage(user: user)
+                        print("message: " + homeData.message)
+                        sendMessageVM.sendMessage(chatID: user.chatID, messageText: homeData.message)
                         homeData.message = ""
                     })
                         .textFieldStyle(PlainTextFieldStyle())
@@ -59,8 +63,14 @@ struct DetailView: View {
                         .padding(.horizontal)
                         .clipShape(Capsule())
                         .background(Capsule().strokeBorder(Color.primary))
+                        .onReceive(timer) { time in
+                            getAllMessagesVM.getAllMessages(chatID: user.chatID)
+                            homeData.appendMessages(user: user, messages: getAllMessagesVM.msgs)
+                        }
                     
-                    Button(action: {}, label: {
+                    Button(action: {
+
+                    }, label: {
                         
                         Image(systemName: "paperplane")
                             .font(.title2)
@@ -271,7 +281,7 @@ struct ExpandedView: View {
                     Divider()
                     
                     Button(action: {
-                        addToChatVM.addToChatroom()
+                        addToChatVM.addToChatroom(chatID: user.chatID)
                         //createChatVM.createChatroom()
                         /*DispatchQueue.main.async {
                             homeData.addChat(chatName: createChatVM.chatName)

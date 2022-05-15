@@ -29,10 +29,10 @@ struct CreateChatView: View {
             
             Button(action: {
                 createChatVM.createChatroom()
-                DispatchQueue.main.async {
-                    homeData.addChat(chatName: createChatVM.chatName)
-                    print(createChatVM.chatID)
-                }
+                //DispatchQueue.main.async {
+                    //homeData.addChat(chatName: createChatVM.chatName)
+                    //print(createChatVM.chatID)
+                //}
             }, label: {
                 Text("Create Chat")
                     .fontWeight(.bold)
